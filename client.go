@@ -122,21 +122,36 @@ func (c *Client) WithApiVersion(apiVersion string) {
 
 // Do send http request
 func (c Client) Do(method, path string, in interface{}, out interface{}) *Error {
-	body, err := json.Marshal(in)
+	var requestBody []byte
+	requestParams := make(url.Values)
+	switch method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch:
+		body, err := json.Marshal(in)
+		if err != nil {
+			return &Error{
+				Code:    -1,
+				Message: err.Error(),
+			}
+		}
+		requestBody = body
+	default:
+		query, err := queryMap(in)
+		if err != nil {
+			return &Error{
+				Code:    -1,
+				Message: err.Error(),
+			}
+		}
+		requestParams = query
+	}
+	requestPath, err := c.requestPath(path, requestParams)
 	if err != nil {
 		return &Error{
 			Code:    -1,
 			Message: err.Error(),
 		}
 	}
-	requestPath, err := c.requestPath(path)
-	if err != nil {
-		return &Error{
-			Code:    -1,
-			Message: err.Error(),
-		}
-	}
-	req, err := http.NewRequest(method, requestPath, bytes.NewBuffer(body))
+	req, err := http.NewRequest(method, requestPath, bytes.NewBuffer(requestBody))
 	if err != nil {
 		return &Error{
 			Code:    -1,
@@ -147,8 +162,8 @@ func (c Client) Do(method, path string, in interface{}, out interface{}) *Error 
 	for k, v := range c.conf.headers {
 		req.Header.Set(k, v)
 	}
-	c.sign(body, req)
-	return c.do(req, body, out)
+	c.sign(requestBody, req)
+	return c.do(req, requestBody, out)
 }
 
 // send request
@@ -170,33 +185,38 @@ func (c Client) do(req *http.Request, requestBody []byte, out interface{}) *Erro
 			}
 		}
 		defer resp.Body.Close()
-		if os.Getenv("DEBUG") != "" {
-			fmt.Printf("> %s %s %s\n", req.Method, req.URL.RequestURI(), req.Proto)
-			fmt.Printf("> Host: %s\n", req.Host)
-			for key, header := range req.Header {
-				for _, value := range header {
-					fmt.Printf("> %s: %s\n", key, value)
-				}
-			}
-			fmt.Println(">")
-			fmt.Println(string(requestBody))
-			fmt.Println(">")
-			fmt.Printf("< %s %s\n", resp.Proto, resp.Status)
-			for key, header := range resp.Header {
-				for _, value := range header {
-					fmt.Printf("< %s: %s\n", key, value)
-				}
-			}
-
-			fmt.Println("< ")
-			fmt.Println(string(body))
-			fmt.Println("< ")
-		}
+		c.debug(requestBody, body, req, resp)
 		return c.response(body, out)
 	}
 	return nil
 }
 
+func (c Client) debug(requestBody, responseBody []byte, req *http.Request, resp *http.Response) {
+	if os.Getenv("DEBUG") != "" {
+		fmt.Printf("> %s %s %s\n", req.Method, req.URL.RequestURI(), req.Proto)
+		fmt.Printf("> Host: %s\n", req.Host)
+		for key, header := range req.Header {
+			for _, value := range header {
+				fmt.Printf("> %s: %s\n", key, value)
+			}
+		}
+		fmt.Println(">")
+		fmt.Println(string(requestBody))
+		fmt.Println(">")
+		fmt.Printf("< %s %s\n", resp.Proto, resp.Status)
+		for key, header := range resp.Header {
+			for _, value := range header {
+				fmt.Printf("< %s: %s\n", key, value)
+			}
+		}
+
+		fmt.Println("< ")
+		fmt.Println(string(responseBody))
+		fmt.Println("< ")
+	}
+}
+
+// parse response
 func (c Client) response(body []byte, out interface{}) *Error {
 	// onebox response parse
 	if c.conf.onebox {
@@ -223,6 +243,7 @@ func (c Client) response(body []byte, out interface{}) *Error {
 	return nil
 }
 
+// parse onebox response
 func (c Client) oneboxResponse(body []byte, out interface{}) *Error {
 	var respError OneboxError
 	if err := json.Unmarshal(body, &respError); err != nil {
@@ -301,6 +322,7 @@ func (c Client) sign(requestBody []byte, req *http.Request) {
 	}
 }
 
+// set default headers
 func (c Client) setDefaultHeader(req *http.Request) {
 	req.Header.Add(HTTPHeaderAppId, fmt.Sprintf("%d", c.conf.appId))
 	if c.conf.deviceId != "" {
@@ -316,7 +338,11 @@ func (c Client) setDefaultHeader(req *http.Request) {
 	req.Header.Add(HTTPHeaderContentType, "application/json")
 }
 
-func (c Client) requestPath(path string) (string, error) {
+// get request path
+// if is onebox request add onebox param in query
+// if ignore http code then add ihc param in query
+// requestPath = apiVerison + requestPath + queryParams
+func (c Client) requestPath(path string, params url.Values) (string, error) {
 	requestPath := fmt.Sprintf("%s/%s/%s",
 		strings.TrimRight(c.conf.endpoint, "/"),
 		c.conf.apiVersion,
@@ -326,6 +352,11 @@ func (c Client) requestPath(path string) (string, error) {
 		return "", err
 	}
 	values := requestUrl.Query()
+	for k, v := range params {
+		for _, v1 := range v {
+			values.Add(k, v1)
+		}
+	}
 	if c.conf.ihc {
 		values.Set("ihc", "true")
 	}

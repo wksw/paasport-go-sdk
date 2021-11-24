@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	paasport "gitee.com/paasport/go-sdk"
+	pb "gitee.com/paasport/protos-repo/account/subscribe"
 )
 
 func main() {
@@ -13,7 +14,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-	if err := client.Do(http.MethodGet, "/", nil, nil); err != nil {
+	if err := client.Do(http.MethodGet, "/", &pb.SubscribeReq{
+		Account: "abc",
+	}, nil); err != nil {
 		log.Fatal(err.Message)
 	}
 }
