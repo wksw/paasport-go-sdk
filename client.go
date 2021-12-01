@@ -344,12 +344,17 @@ func (c Client) request(method, path string, in interface{}) (string, []byte, *E
 
 	switch method {
 	case http.MethodPost, http.MethodPut, http.MethodPatch:
-		requestBody, err := json.Marshal(in)
-		if err != nil {
-			return requestPath, requestBody, &Error{
-				Code:    -1,
-				Message: err.Error(),
+		if in != nil {
+			body, err := json.Marshal(in)
+			if err != nil {
+				return requestPath, requestBody, &Error{
+					Code:    -1,
+					Message: err.Error(),
+				}
 			}
+			requestBody = body
+		} else {
+			requestBody = []byte("{}")
 		}
 	default:
 		values := requestUrl.Query()

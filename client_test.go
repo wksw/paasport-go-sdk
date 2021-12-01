@@ -1,6 +1,7 @@
 package paasport
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -28,28 +29,35 @@ func TestRequest(t *testing.T) {
 		path       string
 		body       interface{}
 		expectPath string
+		expectBody []byte
 	}{
 		{method: http.MethodGet, path: "/a/b", body: struct {
 			A string `json:"a"`
-		}{A: "a"}, expectPath: "http://127.0.0.1:9091/a1/a/b?a=a"},
+		}{A: "a"}, expectPath: "http://127.0.0.1:9091/a1/a/b?a=a", expectBody: nil},
 		{method: http.MethodPost, path: "/a/b", body: struct {
 			A string `json:"a"`
-		}{A: "a"}, expectPath: "http://127.0.0.1:9091/a1/a/b"},
+		}{A: "a"}, expectPath: "http://127.0.0.1:9091/a1/a/b", expectBody: []byte(`{"a":"a"}`)},
 		{method: http.MethodGet, path: "/a/{a}/b", body: struct {
 			A string `json:"a"`
-		}{A: "1"}, expectPath: "http://127.0.0.1:9091/a1/a/1/b?a=1"},
+		}{A: "1"}, expectPath: "http://127.0.0.1:9091/a1/a/1/b?a=1", expectBody: nil},
 		{method: http.MethodPost, path: "/a/{a}/b", body: struct {
-			A string `json:"a"`
-		}{A: "1"}, expectPath: "http://127.0.0.1:9091/a1/a/1/b"},
+			A int `json:"a"`
+		}{A: 1}, expectPath: "http://127.0.0.1:9091/a1/a/1/b", expectBody: []byte(`{"a":1}`)},
 	}
-	for _, request := range requests {
-		requestPath, _, err := client.request(request.method, request.path, request.body)
+	for index, request := range requests {
+		requestPath, requestBody, err := client.request(request.method, request.path, request.body)
+		fmt.Println("----", string(requestBody))
 		if err != nil {
 			t.Error(err)
 			t.FailNow()
 		}
 		if requestPath != request.expectPath {
-			t.Errorf("return '%s' want '%s'", requestPath, request.expectPath)
+			t.Errorf("%d not expect request path return '%s' want '%s'", index, requestPath, request.expectPath)
+			t.FailNow()
+		}
+
+		if string(requestBody) != string(request.expectBody) {
+			t.Errorf("%d not expect request body return '%s' want '%s'", index, string(requestBody), string(request.expectBody))
 			t.FailNow()
 		}
 	}
