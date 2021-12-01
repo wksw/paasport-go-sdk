@@ -202,7 +202,7 @@ func (c Client) response(body []byte, out interface{}) *Error {
 	if err := json.Unmarshal(body, &respError); err != nil {
 		return &Error{
 			Code:    -1,
-			Message: err.Error(),
+			Message: fmt.Sprintf("can not parse response body '%s'", string(body)),
 		}
 	}
 	if respError.Code != 0 {
