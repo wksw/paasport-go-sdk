@@ -121,35 +121,11 @@ func (c *Client) WithApiVersion(apiVersion string) {
 }
 
 // Do send http request
+// replace path with request arguments
 func (c Client) Do(method, path string, in interface{}, out interface{}) *Error {
-	var requestBody []byte
-	requestParams := make(url.Values)
-	switch method {
-	case http.MethodPost, http.MethodPut, http.MethodPatch:
-		body, err := json.Marshal(in)
-		if err != nil {
-			return &Error{
-				Code:    -1,
-				Message: err.Error(),
-			}
-		}
-		requestBody = body
-	default:
-		query, err := queryMap(in)
-		if err != nil {
-			return &Error{
-				Code:    -1,
-				Message: err.Error(),
-			}
-		}
-		requestParams = query
-	}
-	requestPath, err := c.requestPath(path, requestParams)
-	if err != nil {
-		return &Error{
-			Code:    -1,
-			Message: err.Error(),
-		}
+	requestPath, requestBody, rerr := c.request(method, path, in)
+	if rerr != nil {
+		return rerr
 	}
 	req, err := http.NewRequest(method, requestPath, bytes.NewBuffer(requestBody))
 	if err != nil {
@@ -342,27 +318,59 @@ func (c Client) setDefaultHeader(req *http.Request) {
 // if is onebox request add onebox param in query
 // if ignore http code then add ihc param in query
 // requestPath = apiVerison + requestPath + queryParams
-func (c Client) requestPath(path string, params url.Values) (string, error) {
+func (c Client) request(method, path string, in interface{}) (string, []byte, *Error) {
+	var requestBody []byte
+
 	requestPath := fmt.Sprintf("%s/%s/%s",
 		strings.TrimRight(c.conf.endpoint, "/"),
 		c.conf.apiVersion,
 		strings.TrimLeft(path, "/"))
+
 	requestUrl, err := url.Parse(requestPath)
 	if err != nil {
-		return "", err
-	}
-	values := requestUrl.Query()
-	for k, v := range params {
-		for _, v1 := range v {
-			values.Add(k, v1)
+		return requestPath, requestBody, &Error{
+			Code:    -1,
+			Message: err.Error(),
 		}
 	}
-	if c.conf.ihc {
-		values.Set("ihc", "true")
+
+	requestParams, err := queryMap(in)
+	if err != nil {
+		return path, requestBody, &Error{
+			Code:    -1,
+			Message: err.Error(),
+		}
 	}
-	if c.conf.onebox {
-		values.Set("onebox", "true")
+
+	switch method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch:
+		requestBody, err := json.Marshal(in)
+		if err != nil {
+			return requestPath, requestBody, &Error{
+				Code:    -1,
+				Message: err.Error(),
+			}
+		}
+	default:
+		values := requestUrl.Query()
+		for k, v := range requestParams {
+			for _, v1 := range v {
+				values.Add(k, v1)
+			}
+		}
+		if c.conf.ihc {
+			values.Set("ihc", "true")
+		}
+		if c.conf.onebox {
+			values.Set("onebox", "true")
+		}
+		requestUrl.RawQuery = values.Encode()
+
 	}
-	requestUrl.RawQuery = values.Encode()
-	return requestUrl.String(), nil
+
+	// replace path
+	for value := range requestParams {
+		requestUrl.Path = strings.Replace(requestUrl.Path, fmt.Sprintf("{%s}", value), requestParams.Get(value), -1)
+	}
+	return requestUrl.String(), requestBody, nil
 }
