@@ -377,5 +377,8 @@ func (c Client) request(method, path string, in interface{}) (string, []byte, *E
 	for value := range requestParams {
 		requestUrl.Path = strings.Replace(requestUrl.Path, fmt.Sprintf("{%s}", value), requestParams.Get(value), -1)
 	}
+	if len(requestBody) == 0 {
+		requestBody = []byte("{}")
+	}
 	return requestUrl.String(), requestBody, nil
 }

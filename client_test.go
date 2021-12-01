@@ -12,7 +12,7 @@ func TestClient(t *testing.T) {
 		t.Log(err.Error())
 		t.FailNow()
 	}
-	if err := client.Do(http.MethodGet, "/", nil, nil); err != nil {
+	if err := client.Do(http.MethodPost, "/", nil, nil); err != nil {
 		t.Log(err.Message)
 		t.FailNow()
 	}
