@@ -213,7 +213,7 @@ func (c Client) response(body []byte, out interface{}) *Error {
 		if err := json.Unmarshal(body, out); err != nil {
 			return &Error{
 				Code:    -1,
-				Message: err.Error(),
+				Message: fmt.Sprintf("unmarshal response body '%s' to output fail[%s]", string(body), err.Error()),
 			}
 		}
 	}
