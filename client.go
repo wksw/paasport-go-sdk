@@ -40,6 +40,7 @@ func NewClient(ak, sk, endpoint string, configures ...configurer) (*Client, erro
 		endpoint: endpoint,
 		ak:       ak,
 		sk:       sk,
+		headers:  make(map[string]string),
 	}
 	for _, configure := range configures {
 		configure(conf)
