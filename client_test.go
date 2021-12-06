@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+
+	pb "gitee.com/paasport/protos-repo/account"
+	cpb "gitee.com/paasport/protos-repo/common"
 )
 
 type health struct {
@@ -32,6 +35,24 @@ func TestClient(t *testing.T) {
 	t.Logf("%+v", resp)
 }
 
+func TestEnum(t *testing.T) {
+	client, err := NewClient("", "", "http://127.0.0.1:9091")
+	if err != nil {
+		t.Log(err.Error())
+		t.FailNow()
+	}
+	var resp health
+	if err := client.Do(http.MethodGet, "/account/{uid}/addresslabel", &pb.AddressLabelReq{
+		Id:   0,
+		Uid:  0,
+		Type: cpb.AddressLabelType_ALT_CUSTOMIZE,
+	}, &resp); err != nil {
+		t.Logf("%+v", err)
+		t.FailNow()
+	}
+	t.Logf("%+v", resp)
+}
+
 func TestRequest(t *testing.T) {
 	client, err := NewClient("", "", "http://127.0.0.1:9091")
 	if err != nil {
@@ -48,6 +69,9 @@ func TestRequest(t *testing.T) {
 		{method: http.MethodGet, path: "/a/b", body: struct {
 			A string `json:"a"`
 		}{A: "a"}, expectPath: "http://127.0.0.1:9091/a1/a/b?a=a", expectBody: nil},
+		{method: http.MethodGet, path: "/a/b", body: struct {
+			Tp cpb.TransportStatus `json:"type"`
+		}{Tp: cpb.TransportStatus_TS_REGISTING}, expectPath: "http://127.0.0.1:9091/a1/a/b?type=0", expectBody: nil},
 		{method: http.MethodPost, path: "/a/b", body: struct {
 			A string `json:"a"`
 		}{A: "a"}, expectPath: "http://127.0.0.1:9091/a1/a/b", expectBody: []byte(`{"a":"a"}`)},

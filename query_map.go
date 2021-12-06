@@ -290,6 +290,9 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 		}
 		return "0"
 	}
+	if v.Kind() == reflect.Int32 {
+		return fmt.Sprintf("%d", v.Int())
+	}
 
 	if v.Type() == timeType {
 		t := v.Interface().(time.Time)
@@ -307,7 +310,7 @@ func valueString(v reflect.Value, opts tagOptions, sf reflect.StructField) strin
 		}
 		return t.Format(time.RFC3339)
 	}
-
+	// return string(v.Bytes())
 	return fmt.Sprint(v.Interface())
 }
 
