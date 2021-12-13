@@ -2,9 +2,10 @@ package paasport
 
 // Error Define
 type Error struct {
-	Code    int32  `json:"code"`
-	ErrCode int32  `json:"err_code"`
-	Message string `json:"message"`
+	Code       int32  `json:"code"`
+	StatusCode int    `json:"status_code"`
+	ErrCode    int32  `json:"err_code"`
+	Message    string `json:"message"`
 	RequestMeta
 }
 

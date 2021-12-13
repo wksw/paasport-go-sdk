@@ -148,8 +148,9 @@ func (c Client) do(req *http.Request, requestBody []byte, out interface{}) *Erro
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return &Error{
-			Code:    -1,
-			Message: err.Error(),
+			Code:       -1,
+			StatusCode: resp.StatusCode,
+			Message:    err.Error(),
 		}
 	}
 	// parse error
@@ -157,13 +158,18 @@ func (c Client) do(req *http.Request, requestBody []byte, out interface{}) *Erro
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return &Error{
-				Code:    -1,
-				Message: err.Error(),
+				Code:       -1,
+				StatusCode: resp.StatusCode,
+				Message:    err.Error(),
 			}
 		}
 		defer resp.Body.Close()
 		c.debug(requestBody, body, req, resp)
-		return c.response(body, out)
+		rerr := c.response(body, out)
+		if rerr != nil {
+			rerr.StatusCode = resp.StatusCode
+		}
+		return rerr
 	}
 	return nil
 }
