@@ -212,7 +212,7 @@ func (c Client) response(body []byte, out interface{}) *Error {
 			Message: fmt.Sprintf("can not parse response body '%s'", string(body)),
 		}
 	}
-	if respError.Code != 0 {
+	if respError.ErrCode != 0 {
 		return &respError
 	}
 	if out != nil {
