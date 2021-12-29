@@ -123,8 +123,8 @@ func (c *Client) WithApiVersion(apiVersion string) {
 
 // Do send http request
 // replace path with request arguments
-func (c Client) Do(method, path string, in interface{}, out interface{}) *Error {
-	requestPath, requestBody, rerr := c.request(method, path, in)
+func (c Client) Do(method, apiVersion, path string, in interface{}, out interface{}) *Error {
+	requestPath, requestBody, rerr := c.request(method, apiVersion, path, in)
 	if rerr != nil {
 		return rerr
 	}
@@ -325,12 +325,15 @@ func (c Client) setDefaultHeader(req *http.Request) {
 // if is onebox request add onebox param in query
 // if ignore http code then add ihc param in query
 // requestPath = apiVerison + requestPath + queryParams
-func (c Client) request(method, path string, in interface{}) (string, []byte, *Error) {
+func (c Client) request(method, apiVersion, path string, in interface{}) (string, []byte, *Error) {
 	var requestBody []byte
 
+	if apiVersion == "" {
+		apiVersion = c.conf.apiVersion
+	}
 	requestPath := fmt.Sprintf("%s/%s/%s",
 		strings.TrimRight(c.conf.endpoint, "/"),
-		c.conf.apiVersion,
+		apiVersion,
 		strings.TrimLeft(path, "/"))
 
 	requestUrl, err := url.Parse(requestPath)
