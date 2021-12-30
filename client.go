@@ -147,10 +147,16 @@ func (c Client) Do(method, apiVersion, path string, in interface{}, out interfac
 func (c Client) do(req *http.Request, requestBody []byte, out interface{}) *Error {
 	resp, err := c.client.Do(req)
 	if err != nil {
+		if resp != nil {
+			return &Error{
+				Code:       -1,
+				StatusCode: resp.StatusCode,
+				Message:    err.Error(),
+			}
+		}
 		return &Error{
-			Code:       -1,
-			StatusCode: resp.StatusCode,
-			Message:    err.Error(),
+			Code:    -2,
+			Message: err.Error(),
 		}
 	}
 	// parse error
