@@ -35,7 +35,7 @@ type Client struct {
 }
 
 // NewClient create a new paasport client
-func NewClient(ak, sk, endpoint string, configures ...configurer) (*Client, error) {
+func NewClient(ak, sk, endpoint string, configures ...Configurer) (*Client, error) {
 	conf := &Config{
 		endpoint: endpoint,
 		ak:       ak,
