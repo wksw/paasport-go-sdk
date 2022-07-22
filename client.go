@@ -316,6 +316,8 @@ func (c Client) setDefaultHeader(req *http.Request) {
 	req.Header.Add(HTTPHeaderAppId, fmt.Sprintf("%d", c.conf.appId))
 	if c.conf.deviceId != "" {
 		req.Header.Add(HTTPHeaderDeviceId, c.conf.deviceId)
+	} else {
+		req.Header.Add(HTTPHeaderDeviceId, userAgent())
 	}
 	if c.conf.tenantName != "" {
 		req.Header.Add(HTTPHeaderTenant, c.conf.tenantName)
